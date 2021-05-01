@@ -1,0 +1,55 @@
+##Thread_create()
+- starts a new thread 
+- invoking function
+- arg is passed as the sole argument of function
+- stack is the pointer to call stack of new thread
+- return value: thread ID of new thread
+
+
+##Thread_join()
+- waits for the thread specified by tid to terminate
+- if thread has already terminated, returns immediately.
+- Copy exit status of the target thread into the location pointed by *retval.
+- call stack of terminated thread should be freed by the calling thread.
+- return value: success 0. no thread with input tid return 1
+
+
+##Thread_exit()
+- terminates calling thread 
+- returns a value via retval
+
+
+##gettid()
+- returns threadID of caller
+- If the process is a single threaded process, thread ID is same with process ID.
+- In a multi-process, all threads have same process ID, but each one has a unique thread ID.
+- return value: thread ID of calling thread
+
+
+##Consideration
+- no parent-child relationship among thread.
+- Any thread can invoke thread_join() for another thread.
+- All thread within a process should return the same process ID.
+- Thread IDs are guaranteed to be unique only within a process.
+- When a thread calls thread_exit(), thread remains a zombie state(until other thread calls thread_join())
+
+###syscall.h
+- Add system call number
+
+###syscall.c
+- Add system call argument 
+
+###sysproc.c
+- Add interrupt function
+
+###usys.S
+- Add system call
+
+###user.h
+- Add system call
+
+###defs.h
+- Add definition of new functions
+
+###proc.c
+- 
