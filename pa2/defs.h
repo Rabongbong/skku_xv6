@@ -121,7 +121,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 int             getnice(int pid);
-int             setnice(int pid, int nice);
+void             setnice(int pid, int nice);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -15,6 +15,7 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+int nextnice = 20;
 extern void forkret(void);
 extern void trapret(void);
 
@@ -88,6 +89,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->nice = nextnice; // give nice
 
   release(&ptable.lock);
 
@@ -199,6 +201,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->nice = curproc -> nice; // child process has the same priority as the parent process
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -323,6 +326,8 @@ void
 scheduler(void)
 {
   struct proc *p;
+  // struct proc *np=0; 
+  int se=41;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -336,23 +341,33 @@ scheduler(void)
       if(p->state != RUNNABLE)
         continue;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      if(p->nice < se){
+        se = p->nice;
+      }
+    }
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+      if(p->nice == se){
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
     release(&ptable.lock);
-
   }
+
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -533,12 +548,69 @@ procdump(void)
   }
 }
 
-int getnice(int pid)
-{
+int getnice(int p_id)
+{ 
+  int niceValue=0;
+  struct proc *p;
 
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == p_id){
+      niceValue=p->nice;
+      break;
+    }
+  }
+
+  release(&ptable.lock);
+
+  return niceValue;
 }
 
-int setnice(int pid, int nice)
+void setnice(int p_id, int nice)
 {
+  struct proc *p;
+  // struct cpu *c = mycpu();
+  int se = 41;
+  if(nice > 40)
+    return;
   
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == p_id){
+      p->nice = nice;
+      break;
+    }
+    
+    if(p->nice <se)
+      se=p->nice;
+  }
+
+  
+
+  // for(;;){
+  //   //sti();
+  // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  //   if(p->nice == se){
+  //       // Switch to chosen process.  It is the process's job
+  //       // to release ptable.lock and then reacquire it
+  //       // before jumping back to us.
+  //       c->proc = p;
+  //       switchuvm(p);
+  //       p->state = RUNNING;
+
+  //       swtch(&(c->scheduler), p->context);
+  //       switchkvm();
+
+  //       // Process is done running for now.
+  //       // It should have changed its p->state before coming back.
+  //       c->proc = 0;
+  //     }
+  // }
+
+  release(&ptable.lock);
+  // }
+  wait();
+
+  return;
 }

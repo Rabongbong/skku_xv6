@@ -120,5 +120,6 @@ int sys_setnice(void)
   if(argint(1, &nice)<0)
     return -1;
 
-  return setnice(pid, nice);
+  setnice(pid, nice);
+  return 0;
 }
