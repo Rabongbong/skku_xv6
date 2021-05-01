@@ -532,3 +532,13 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int getnice(int pid)
+{
+
+}
+
+int setnice(int pid, int nice)
+{
+  
+}
