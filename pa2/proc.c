@@ -297,6 +297,7 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        p->nice = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -326,7 +327,6 @@ void
 scheduler(void)
 {
   struct proc *p;
-  // struct proc *np=0; 
   int se=41;
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -346,17 +346,19 @@ scheduler(void)
       }
     }
 
+    // cprintf("se: %d \n", se);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-      if(p->nice == se){
+      if(p->nice <= se){
+        // cprintf("nice: %d \n", p->nice);
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-
+        se = p->nice;
         swtch(&(c->scheduler), p->context);
         switchkvm();
 
@@ -570,47 +572,29 @@ int getnice(int p_id)
 void setnice(int p_id, int nice)
 {
   struct proc *p;
-  // struct cpu *c = mycpu();
+  struct proc *curproc = myproc();
   int se = 41;
   if(nice > 40)
     return;
-  
+
+  // cprintf("%d %d\n", p_id, nice);
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == p_id){
       p->nice = nice;
-      break;
     }
     
-    if(p->nice <se)
+    if(p->nice <se && p->nice!=0)
       se=p->nice;
   }
 
-  
-
-  // for(;;){
-  //   //sti();
-  // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-  //   if(p->nice == se){
-  //       // Switch to chosen process.  It is the process's job
-  //       // to release ptable.lock and then reacquire it
-  //       // before jumping back to us.
-  //       c->proc = p;
-  //       switchuvm(p);
-  //       p->state = RUNNING;
-
-  //       swtch(&(c->scheduler), p->context);
-  //       switchkvm();
-
-  //       // Process is done running for now.
-  //       // It should have changed its p->state before coming back.
-  //       c->proc = 0;
-  //     }
+  cprintf("se: %d  %d\n", se, curproc->nice );
+  // if(curproc->nice  > se || se==41){
+    curproc->state=RUNNABLE;
+    sched();
   // }
 
   release(&ptable.lock);
-  // }
-  wait();
 
   return;
 }
