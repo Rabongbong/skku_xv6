@@ -331,7 +331,7 @@ scheduler(void)
   // int p_id;
   struct cpu *c = mycpu();
   // p_id = c-> proc -> pid;
-  c->proc = 0;
+ 
   
   for(;;){
     // Enable interrupts on this processor.
@@ -353,7 +353,6 @@ scheduler(void)
       if(p->state != RUNNABLE)
         continue;
       if(p->nice == se){
-        // cprintf("nice: %d \n", p->nice);
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
@@ -571,30 +570,26 @@ int getnice(int p_id)
   return niceValue;
 }
 
+
 void setnice(int p_id, int nice)
 {
   struct proc *p;
   struct proc *curproc = myproc();
-  int se = 41;
+
   if(nice > 40)
     return;
 
-  // cprintf("%d %d\n", p_id, nice);
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == p_id){
       p->nice = nice;
+      break;
     }
     
-    if(p->nice <se && p->nice!=0)
-      se=p->nice;
   }
 
-  // cprintf("se: %d  %d\n", se, curproc->nice );
-  if(curproc->nice  >=se){
-    curproc->state=RUNNABLE;
-    sched();
-  }
+  curproc->state=RUNNABLE;
+  sched();
 
   release(&ptable.lock);
 
