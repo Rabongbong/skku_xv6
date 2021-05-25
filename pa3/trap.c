@@ -8,9 +8,11 @@
 #include "traps.h"
 #include "spinlock.h"
 
+
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
+extern int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 struct spinlock tickslock;
 uint ticks;
 
@@ -36,6 +38,8 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  char* mem;
+  uint va;
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
       exit();
@@ -77,6 +81,20 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT: 
+		va = PGROUNDDOWN(rcr2());
+		mem=kalloc();
+		if(mem==0){
+			cprintf("allocuvm out of memory\n");
+			break;
+		}
+		memset(mem,0,PGSIZE);
+    if(mappages(myproc()->pgdir, (char*)va, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+      cprintf("allocuvm out of memory (2)\n");
+      kfree(mem);
+      break;
+    }
+		break;
 
   //PAGEBREAK: 13
   default:
@@ -103,7 +121,7 @@ trap(struct trapframe *tf)
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER)
+    tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
 
   // Check if the process has been killed since we yielded
