@@ -81,10 +81,11 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  // case T_PGFLT
   case T_PGFLT: 
 		va = PGROUNDDOWN(rcr2());
-		mem=kalloc();
-		if(mem==0){
+		mem=kalloc();  // allocate memory for kernel
+		if(mem==0){ // return 0 if fails
 			cprintf("allocuvm out of memory\n");
 			break;
 		}
